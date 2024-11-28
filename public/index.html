@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Controle de Umidade e Temperatura</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+            padding: 40px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: #ffffff;
+            font-size: 2rem;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .main-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            width: 90%;
+            max-width: 1100px;
+        }
+
+        .box {
+            width: 100%;
+            max-width: 500px;
+            background-color: #1e1e1e;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .box label {
+            font-size: 16px;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #e0e0e0;
+            text-align: center;
+        }
+
+        .box input[type="date"] {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border-radius: 6px;
+            border: 1px solid #444;
+            margin-bottom: 20px;
+            background-color: #333;
+            color: #fff;
+            transition: border 0.3s;
+        }
+
+        .box input[type="date"]:focus {
+            border-color: #007bff;
+            background-color: #444;
+        }
+
+        button {
+            width: 100%;
+            background-color: #007bff;
+            color: #fff;
+            padding: 15px;
+            font-size: 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .result-box {
+            width: 100%;
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #2c2f38;
+            border: 1px solid #444;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            display: none;
+        }
+
+        .result-box h3 {
+            font-size: 18px;
+            color: #ffffff;
+            margin-bottom: 10px;
+        }
+
+        .result-box ul {
+            list-style-type: none;
+        }
+
+        .result-box li {
+            font-size: 16px;
+            color: #e0e0e0;
+            margin-bottom: 8px;
+        }
+
+        .error {
+            color: red;
+            font-size: 16px;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        @media (min-width: 768px) {
+            .box {
+                width: 48%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Selecione a Data para Temperatura e Umidade</h1>
+
+    <div class="main-container">
+        <div class="box">
+            <label for="date">Selecione a data:</label>
+            <input type="date" id="date" name="date">
+            <button id="verificarButton">Verificar</button>
+            <div id="erro" class="error"></div>
+            <div id="resultado" class="result-box"></div>
+        </div>
+
+        <!-- Box para exibir todos os dados -->
+        <div class="box">
+            <button id="exibirTodosButton">Exibir Todos os Dados</button>
+            <div id="todosDados" class="result-box"></div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById("verificarButton").addEventListener("click", function() {
+            const date = document.getElementById("date").value;
+
+            if (!date) {
+                document.getElementById("erro").textContent = "Por favor, selecione uma data.";
+                document.getElementById("resultado").style.display = 'none';
+                return;
+            } else {
+                document.getElementById("erro").textContent = ""; 
+            }
+
+            // Enviar apenas a data no formato correto (YYYY-MM-DD)
+            const dataHora = `${date}`;
+
+            fetch('/verificar', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ dataHora: dataHora })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    document.getElementById("resultado").innerHTML = `<strong>${data.message}</strong>`;
+                } else {
+                    let resultHTML = "<h3>Dados encontrados:</h3><ul>";
+                    data.forEach(item => {
+                        resultHTML += `<li>Data e Hora: ${item.dataHora} | Temperatura: ${item.temperatura}°C | Umidade: ${item.umidade}%</li>`;
+                    });
+                    resultHTML += "</ul>";
+                    document.getElementById("resultado").innerHTML = resultHTML;
+                }
+                document.getElementById("resultado").style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Erro ao buscar dados:', error);
+                document.getElementById("resultado").innerHTML = `<strong>Erro ao buscar dados. Tente novamente mais tarde.</strong>`;
+                document.getElementById("resultado").style.display = 'block';
+            });
+        });
+
+        document.getElementById("exibirTodosButton").addEventListener("click", function() {
+            fetch('/exibirTodos', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                let todosDadosHTML = "<h3>Todos os Dados:</h3><ul>";
+                data.forEach(item => {
+                    todosDadosHTML += `<li>Data e Hora: ${item.dataHora} | Temperatura: ${item.temperatura}°C | Umidade: ${item.umidade}%</li>`;
+                });
+                todosDadosHTML += "</ul>";
+
+                document.getElementById("todosDados").innerHTML = todosDadosHTML;
+                document.getElementById("todosDados").style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Erro ao buscar todos os dados:', error);
+                document.getElementById("todosDados").innerHTML = `<strong>Erro ao buscar todos os dados. Tente novamente mais tarde.</strong>`;
+                document.getElementById("todosDados").style.display = 'block';
+            });
+        });
+    </script>
+
+</body>
+</html>
